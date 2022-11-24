@@ -27,10 +27,12 @@ add_compile_options(-Wall
 if (TARGET tinyusb_device)
     add_executable(FlipDisplay
             main.cpp
+            stepper.cpp
+            endstop.cpp
             )
     set(CMAKE_SYSTEM_NAME Generic)
     # pull in common dependencies
-    target_link_libraries(FlipDisplay pico_stdlib hardware_adc)
+    target_link_libraries(FlipDisplay pico_stdlib hardware_adc hardware_i2c)
 
     # enable usb output, disable uart output
     pico_enable_stdio_usb(FlipDisplay 1)
