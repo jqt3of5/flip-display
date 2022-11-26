@@ -17,7 +17,7 @@ const int motor_pins[4][4] =
         };
 
 const int stepsPerRevolution = 2038; //Actual  2037.8864
-const int preset_positions = 40;
+const int preset_positions = 11;
 const int stepsPerPosition = stepsPerRevolution/preset_positions;
 
 //The current step position for each motor relative to the endstop.
@@ -27,6 +27,9 @@ int current_wires[4] = {0, 0, 0, 0};
 
 void stepper_init()
 {
+    uint16_t thresholds[4] = {2048, 2048, 2048, 2048};
+    endstop_init(thresholds);
+
     for (int j = 0; j < 3; ++j)
     {
         for(int i = 0; i < 4; ++i)
