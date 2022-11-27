@@ -8,8 +8,8 @@
 #include <hardware/i2c.h>
 #include <cstdio>
 
-const uint8_t read_addr = 0b10010001;
-const uint8_t write_addr = 0b10010000;
+const uint8_t read_addr = 0b1001000;
+const uint8_t write_addr = 0b1001000;
 
 const uint8_t POINTER_CONFIG = 0b00000001;
 const uint8_t POINTER_CONVERSION = 0b00000000;
@@ -47,17 +47,21 @@ const uint8_t POINTER_CONVERSION = 0b00000000;
 
 #define DISABLE_COMP (COMP_QUE1 | COMP_QUE0)
 
+#define SDA 0
+#define SCL 1
+#define i2c_port i2c0
+
 uint16_t endstop_thresholds[4] = {2048, 2048, 2048, 2048};
 
 uint16_t endstop_readConfig()
 {
+    uint8_t config[2] = {POINTER_CONFIG};
     //Write to config
-    i2c_write_blocking(i2c_default, write_addr, &POINTER_CONFIG, 1, false);
+    i2c_write_blocking(i2c_port, write_addr, config, 1, true);
 
-    uint8_t config[2] = {0};
-    i2c_read_blocking(i2c_default, read_addr, config, 2, false);
+    i2c_read_blocking(i2c_port, read_addr, config, 2, false);
 
-    return (uint16_t)(*config);
+    return config[1] << 8 | config[0];
 }
 
 void endstop_writeConfig(uint16_t config)
@@ -66,20 +70,24 @@ void endstop_writeConfig(uint16_t config)
     uint8_t toWrite[3] ={
             POINTER_CONFIG, //Write to pointer reg
             ((uint8_t*)&config)[1],
-            ((uint8_t*)&config)[0]
+            ((uint8_t*)&config)[0],
     };
-    i2c_write_blocking(i2c_default, write_addr, toWrite, 3, false);
+    i2c_write_blocking(i2c_port, write_addr, toWrite, 3, false);
 }
 
 uint16_t endstop_readConversion()
 {
     //write to pointer register so we can read from conversion register
-    i2c_write_blocking(i2c_default, write_addr, &POINTER_CONVERSION, 1, false);
+    i2c_write_blocking(i2c_port, write_addr, &POINTER_CONVERSION, 1, false);
 
     uint8_t readConversion[2] = {0};
-    i2c_read_blocking(i2c_default, read_addr, readConversion, 2, false);
+    i2c_read_blocking(i2c_port, read_addr, readConversion, 2, false);
 
-    return (uint16_t)(*readConversion);
+//    uint8_t swap = readConversion[0];
+//    readConversion[0] = readConversion[1];
+//    readConversion[1] = swap;
+
+    return readConversion[1] << 8 | readConversion[0];
 }
 
 void endstop_startConversion(int ain)
@@ -115,18 +123,33 @@ void endstop_init(uint16_t thresholds[4])
         endstop_thresholds[i] = thresholds[i];
     }
 
-    i2c_init(i2c_default, 400 * 1000);
+    i2c_init(i2c_port, 400 * 1000);
 
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    gpio_set_function(SDA, GPIO_FUNC_I2C);
+    gpio_set_function(SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(SDA);
+    gpio_pull_up(SCL);
+
+    gpio_put(PICO_DEFAULT_LED_PIN, true);
+    sleep_ms(500);
+    gpio_put(PICO_DEFAULT_LED_PIN, false);
+    sleep_ms(500);
 
     endstop_writeConfig(ONE_SHOT | AIN0 | PGA_4_096 | MODE | SPS128 | DISABLE_COMP);
     printf("Wrote config\n");
 
     auto config = endstop_readConfig();
+
+    for (int i = 0; i < 16; ++i)
+    {
+        gpio_put(PICO_DEFAULT_LED_PIN, true);
+        sleep_ms((config& (1<<i)) ? 1000 : 250);
+        gpio_put(PICO_DEFAULT_LED_PIN, false);
+        sleep_ms(1000);
+    }
+
     printf("Config: %X\n", config);
+
 }
 bool endstop_isZero(int endStop)
 {
@@ -138,11 +161,30 @@ bool endstop_isZero(int endStop)
     endstop_startConversion(endStop);
     printf("Conversion Started for endstop: %d\n", endStop);
 
+//    gpio_put(PICO_DEFAULT_LED_PIN, true);
+//    sleep_ms(250);
+//    gpio_put(PICO_DEFAULT_LED_PIN, false);
+//    sleep_ms(250);
+
     endstop_waitForConversion();
     printf("Conversion Finished\n");
 
+//    gpio_put(PICO_DEFAULT_LED_PIN, true);
+//    sleep_ms(250);
+//    gpio_put(PICO_DEFAULT_LED_PIN, false);
+//    sleep_ms(250);
+
     auto result = endstop_readConversion();
     printf("Conversion Read %d\n", result);
+
+    for (int i = 0; i < 16; ++i)
+    {
+        gpio_put(PICO_DEFAULT_LED_PIN, true);
+        sleep_ms((result& (1<<i)) ? 1000 : 250);
+        gpio_put(PICO_DEFAULT_LED_PIN, false);
+        sleep_ms(1000);
+    }
+
     if (result > endstop_thresholds[endStop])
     {
         return true;

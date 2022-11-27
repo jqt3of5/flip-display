@@ -11,9 +11,9 @@
 const int motor_pins[4][4] =
         {
                 {2, 4, 3, 5},
-                {2, 4, 3, 5},
-                {2, 4, 3, 5},
-                {2, 4, 3, 5}
+                {6, 8, 7, 9},
+                {10, 12, 11, 13},
+                {14, 27, 15, 26}
         };
 
 const int stepsPerRevolution = 2038; //Actual  2037.8864
@@ -30,7 +30,7 @@ void stepper_init()
     uint16_t thresholds[4] = {2048, 2048, 2048, 2048};
     endstop_init(thresholds);
 
-    for (int j = 0; j < 3; ++j)
+    for (int j = 0; j < 4; ++j)
     {
         for(int i = 0; i < 4; ++i)
         {
@@ -64,7 +64,6 @@ void stepper_disableMotors()
         }
     }
 }
-
 
 bool stepper_zeroAll()
 {
