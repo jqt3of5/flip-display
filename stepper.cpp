@@ -10,7 +10,7 @@
 
 const int motor_pins[4][4] =
         {
-                {2, 4, 3, 5},
+                {5, 4, 3, 2},
                 {6, 8, 7, 9},
                 {10, 12, 11, 13},
                 {14, 27, 15, 26}
@@ -46,12 +46,11 @@ void stepper_init()
 void stepper_nextStep(int motor)
 {
     gpio_put(motor_pins[motor][(current_wires[motor] + 4 - 1) % 4], false);
-    gpio_put(motor_pins[motor][current_wires[motor] % 4], true);
+//    gpio_put(motor_pins[motor][current_wires[motor] % 4], true);
     gpio_put(motor_pins[motor][(current_wires[motor] + 1) % 4], true);
     current_wires[motor] += 1;
     current_wires[motor] = current_wires[motor] % 4;
 
-    sleep_ms(10);
 }
 
 void stepper_disableMotors()
@@ -72,15 +71,17 @@ bool stepper_zeroAll()
         bool allZero = true;
         for (int motor = 0; motor < 4; ++motor)
         {
-            if (endstop_isZero(motor))
-            {
-                current_steps[motor] = 0;
-                continue;
-            }
+            //TODO: Uncomment when endstops in place
+//            if (endstop_isZero(motor))
+//            {
+//                current_steps[motor] = 0;
+//                continue;
+//            }
             allZero = false;
             stepper_nextStep(motor);
         }
 
+        sleep_ms(3);
         if (allZero)
         {
             return true;
@@ -134,6 +135,8 @@ bool stepper_setPositionAll(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
                 stepsRemaining[motor] -= 1;
             }
         }
+
+        sleep_ms(3);
     }
 
     //Don't need to hold position after moving

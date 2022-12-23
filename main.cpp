@@ -11,7 +11,6 @@
 #define LED_PIN PICO_DEFAULT_LED_PIN
 #endif
 
-const char * letter_order = "0123456789 ";
 
 int main() {
     stdio_init_all();
@@ -24,7 +23,21 @@ int main() {
 
     stepper_init();
 
-    stepper_setPositionAll(1,2,3, 4);
+    uint64_t time = 0;
+    while(true) {
+        for (int i = 0; i < 60; ++i)
+        {
+            //Check for button clicks
+            sleep_ms(1000);
+        }
 
+        time += 1;
+
+        uint minutes = time % 60;
+        uint hours = (time / 60) % 12;
+
+        //Need to double check number position
+        stepper_setPositionAll(hours / 10,hours % 10,minutes / 10, minutes % 10);
+    }
     return 0;
 }
